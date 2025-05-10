@@ -1,14 +1,14 @@
 # Compiler and flags
 CC = nvcc
 CFLAGS = --default-stream per-thread  # Flag generici per CUDA
-COMPUTE_ARCH = compute_75
-SM_ARCH = sm_75
+COMPUTE_ARCH = 
+SM_ARCH = 
 ARCH_FLAGS = -arch=$(COMPUTE_ARCH) -code=$(SM_ARCH)
 
 # Paths (Windows-style, ma con / invece di \)
-INCLUDE_PATH = -I"C:/Users/FrancescoStudente/vcpkg/installed/x64-windows/include"
-LIB_PATH = -L"C:/Users/FrancescoStudente/vcpkg/installed/x64-windows/lib"
-LIBS = -lmpir
+INCLUDE_PATH = -I""
+LIB_PATH = -L""
+LIBS = -lmpir #or gmp
 
 # Files
 EXEC = main

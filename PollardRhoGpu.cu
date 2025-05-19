@@ -1,4 +1,3 @@
-
 #include "PollardRhoGpu.h"
 
 __device__ int global_flag;
@@ -172,7 +171,7 @@ __device__ inline void sub(const uint32_t* x,  const uint32_t* y, uint32_t* res,
 
 __device__ inline void mcd(const uint32_t* x, const uint32_t* y, uint32_t* res, size_t tid, uint32_t* d, uint32_t* tmp_x, uint32_t* tmp_y, uint32_t* is_zero, size_t* pos, uint32_t* G, uint32_t* P, uint32_t* TMP)
 {
-
+	int i=0;
 	
 	res[tid] = 0;
 	tmp_x[tid] = 0;
@@ -195,6 +194,8 @@ __device__ inline void mcd(const uint32_t* x, const uint32_t* y, uint32_t* res, 
 		{
             shiftR1(tmp_x, tid);
             shiftR1(tmp_y, tid);
+
+			i++;
     
             if(tid == 0) (*d)++;
             __syncthreads();
@@ -202,11 +203,14 @@ __device__ inline void mcd(const uint32_t* x, const uint32_t* y, uint32_t* res, 
     
 		while(nonZero(tmp_x, tid, is_zero)) 
 		{            
-            while((tmp_x[0] & 1) == 0) {
+            while((tmp_x[0] & 1) == 0) 
+			{
                 shiftR1(tmp_x, tid);
+				i++;
             }
     
-            while((tmp_y[0] & 1) == 0) {
+            while((tmp_y[0] & 1) == 0) 
+			{
                 shiftR1(tmp_y, tid);
             }
             
@@ -214,11 +218,15 @@ __device__ inline void mcd(const uint32_t* x, const uint32_t* y, uint32_t* res, 
 			{
                 sub(tmp_x, tmp_y, tmp_x, tid, G, P, TMP);
                 shiftR1(tmp_x, tid);
+				i++;
             }
             else{	
                 sub(tmp_y, tmp_x, tmp_y, tid, G, P, TMP);	
                 shiftR1(tmp_y, tid);
             }
+
+			if(tid == 0 && i > BITS_PER_WORD*NUM_WORDS) printf("F %d", blockIdx.x);
+
 			__syncthreads();
         }
 		res[tid] = tmp_y[tid];
@@ -633,8 +641,8 @@ void rhoPollardGPU(const uint32_t* N, uint32_t* divider)
 	dim3 blockDims(THREADSPERBLOCK_X);
 
 	int max_threads_per_block;
-cudaDeviceGetAttribute(&max_threads_per_block, cudaDevAttrMaxThreadsPerBlock, 0);
-printf("Max threads per block: %d\n", max_threads_per_block);
+	cudaDeviceGetAttribute(&max_threads_per_block, cudaDevAttrMaxThreadsPerBlock, 0);
+	printf("Max threads per block: %d\n", max_threads_per_block);
 
 	rhoPollard<<<gridDims,blockDims>>>(N_d, DIV_d, n_prime_d, r2_mod_n_d, leading_zeros, N_minus_4_d, N_minus_3_d/*,global_flag_d*/);
 
@@ -672,47 +680,4 @@ printf("Max threads per block: %d\n", max_threads_per_block);
 	free(N_minus_4);
 	free(N_minus_3);
 	//free(global_flag);
-}
-
-//funzione per la ground truth e determinare se il divisore è effettivamente corretto
-int is_divisor(const uint32_t* N, const uint32_t* div){
-    // Convertiamo N e div in numeri GMP
-    mpz_t mpz_N, mpz_divider, mpz_remainder;
-    
-    // Inizializziamo i numeri GMP
-    mpz_init(mpz_N);
-    mpz_init(mpz_divider);
-    mpz_init(mpz_remainder);
-    
-    // Importiamo i numeri dagli array di uint32_t (assumendo little-endian)
-    mpz_import(mpz_N, NUM_WORDS, -1, sizeof(uint32_t), 0, 0, N);
-    mpz_import(mpz_divider, NUM_WORDS, -1, sizeof(uint32_t), 0, 0, div);
-    
-    // Calcoliamo il resto N % div
-    mpz_mod(mpz_remainder, mpz_N, mpz_divider);
-    
-    // Verifichiamo se il resto è zero
-    int is_divisor = (mpz_cmp_ui(mpz_remainder, 0) == 0);
-    
-    // Puliamo le risorse GMP
-    mpz_clear(mpz_N);
-    mpz_clear(mpz_divider);
-    mpz_clear(mpz_remainder);
-    
-    // Restituisce true se div è un divisore (N % div == 0)
-    return is_divisor;
-}
-
-int main(){
-
-	uint32_t divider[NUM_WORDS], N[NUM_WORDS]={1};
-	srand(time(NULL));
-
-	generate_N(N);
-	print_num("N: ",N);
-
-	rhoPollardGPU(N, divider);
-	print_num("Divider: ", divider);
-
-    return 0;
 }

@@ -1,3 +1,5 @@
+#ifndef POLLARDRHO_GPU_H
+#define POLLARDRHO_GPU_H
 
 #include <iostream>
 #include <curand_kernel.h>
@@ -33,3 +35,5 @@ void generate_random_odd_number(uint32_t *output);
 void generate_N(uint32_t* N);
 uint32_t invMul(uint32_t n);
 void compute_r2_mod_n(uint32_t* r2_mod_n, const uint32_t* N);
+
+#endif
